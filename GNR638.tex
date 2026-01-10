@@ -1,0 +1,182 @@
+\documentclass[12pt,a4paper,twoside]{book}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+% Book-like two-sided margins: larger inner margin for binding
+\geometry{a4paper, inner=1in, outer=1cm, top=2cm, bottom=2cm}
+\usepackage{amsmath, amssymb, amsfonts} % Core math packages
+\usepackage{mathtools} % For advanced math layout
+\usepackage{graphicx}  % For inserting images
+\usepackage{hyperref}  % For clickable links in ToC
+\usepackage{float}     % To control figure placement
+\usepackage{parskip}   % Adds space between paragraphs
+\usepackage{bm}        % For bold math symbols (vectors/matrices)
+\usepackage{tcolorbox} % For colored boxes
+\usepackage{marginnote} % For margin notes and side content
+
+% --- Custom Commands for Notation ---
+\newcommand{\R}{\mathbb{R}} % Real numbers
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert} % Norm command ||x||
+\newcommand{\bx}{\mathbf{x}} % Bold x for vectors
+\newcommand{\by}{\mathbf{y}} % Bold y for vectors
+\newcommand{\Hmat}{\mathbf{H}} % Transformation matrix H
+
+% --- Title Page Info ---
+\title{
+    \textbf{GNR638: Feature Extraction from Images}\\
+    \large Detailed Mathematical Notes \& Derivations
+}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\frontmatter
+\tableofcontents
+\cleardoublepage
+\mainmatter
+
+% Now you can add chapters with:
+% \chapter{Introduction}
+% Chapter text...
+\newpage
+\chapter{Vision Features}
+\section{Image Features Vectors}
+Image feature vectors are encoding tool that help represent images in a way that is suitable for Machine Learning Tasks and Algorithms.\\
+Mathematically, an image (or a patch of an image) is a high-dimensional object. If you have an image patch of size $N \times M$ pixels, raw data lives in $\mathbb{R}^{N \times M}$.  A feature extraction function $f$ maps this raw data into a more manageable, meaningful vector space $\mathbb{R}^d$ (where $d$ is the feature dimension)\\
+$$\mathbf{x} = f(\text{Image}) \in \mathbb{R}^d$$The vector $\mathbf{x} = [x_1, x_2, \dots, x_d]^T$ is the feature vector. Each component $x_i$ captures a specific characteristic of the image, such as color intensity, texture patterns, edge orientations, or more complex attributes learned through deep learning models.\\
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Media/i10011.png}
+    \caption{Block diagram of the system}
+    \label{fig:Feature vector}
+\end{figure}
+
+\subsection{Why are they Useful?}
+Feature vectors makes it possible for ML to work. Example we want to vectorise the images and then cluster them in the $\mathbb{R^d}$ space, such that within class variance is very low and between class variance is high.\\
+\begin{itemize}
+    \item vectorisation $\Rightarrow$ numerical representation of images
+    \item clustering $\Rightarrow$ grouping similar images together
+    \item within class variance $\Rightarrow$ how similar images in the same group are
+    \item between class variance $\Rightarrow$ how different images in different groups are
+\end{itemize}
+
+\section{Visual Features}
+There are 4 types of visual features:
+\begin{itemize}
+    \item Color Features
+    \item Texture Features
+    \item Shape Features
+    \item Deep features
+\end{itemize}
+
+\section{Color Features}
+\subsection{Binning}
+Image $\rightarrow$ 3 color channels (R,G,B) $\rightarrow$ 0 to 255 (256) values $\rightarrow$ Total Combinations = $256^3$ .\\
+Too many combinations, so we reduce them by grouping the near values into Bins.\\
+The Math of Binning:For a pixel intensity $p$, its bin index $b$ is calculated as:$$b = \left\lfloor \frac{p}{W} \right\rfloor$$Example: If Pixel Value = 100 and Bin Width = 32.$b = \lfloor 100 / 32 \rfloor = \lfloor 3.125 \rfloor = 3$.So, pixel 100 falls into Bin 3.
+
+\subsection{Color Histogram}
+\textbf{Creation of Histogram} is just the number of  pixels falling into a specific bin
+Mathematically the equation for histogram bin count is given by -
+$$h[k] = \sum_{x=0}^{H-1} \sum_{y=0}^{W-1} \mathbb{I}\left( \left\lfloor \frac{I_c(x,y)}{\text{bin\_width}} \right\rfloor = k \right)$$
+The Issue with color histogram is it is tied to the size of the image and therefore two images having the same color profile can have different lokking histograms if there is difference in size of the images to deal with this shastro mein Normalisation ka zikr hai !!\\
+\textbf{Normalisation of Histogram} is done by dividing each bin count by the total number of pixels in the image. $\Rightarrow$ histogram = probability distribution making it invariant to image size.\\
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Media/i10012.png}
+    \caption{Block diagram of the system}
+    \label{fig:Histogram}
+\end{figure}
+
+\subsection{Parametric Density Estimation}
+\textbf{The Idea} is to instead of storing the entire histogram as color feature we reduce the features to just Mean and Variance of the histogram or a Gaussian curve fitted over the Histogram Data. There are 3 methods in which we can do it.\\
+\paragraph{Method 1: Per-Channel Statistics (Independent Gaussians)} This is the simplest approach. We assume the Red, Green, and Blue channels are completely unrelated (independent). We simply ask: "What is the average Red?" and "How much does the Red vary?"The Math: For each channel $c \in \{R, G, B\}$, we compute two statistics over $N$ pixels:Mean ($\mu_c$): The average intensity.$$\mu_{c} = \frac{1}{N}\sum_{i=1}^{N} x_{i,c}$$Standard Deviation ($\sigma_c$): The spread/contrast.$$\sigma_{c} = \sqrt{\frac{1}{N}\sum_{i=1}^{N} (x_{i,c} - \mu_{c})^2}$$The Feature Vector: We store these values for all 3 channels.$$\mathbf{f} = [\mu_R, \sigma_R, \mu_G, \sigma_G, \mu_B, \sigma_B]$$Dimension: 6 parameters2.Limitation: It destroys the relationship between colors. If an image has many Yellow pixels (High Red + High Green), this method just sees "High Red" and "High Green" independently. It doesn't know they occurred together in the same pixel.
+\paragraph{Method 2: 3D Multivariate Gaussian (Single Gaussian)} This method treats the color as a single 3D vector $\mathbf{x} = [R, G, B]^T$. It fits a 3D ellipsoid to the data cloud. This captures not just the spread, but the correlation between channels.The Math:Mean Vector ($\boldsymbol{\mu}$): A 3D vector representing the center of the color cloud.$$\boldsymbol{\mu} = \frac{1}{N}\sum_{i=1}^{N} \mathbf{x}_i$$Covariance Matrix ($\Sigma$): A $3 \times 3$ symmetric matrix capturing how channels move together.$$\Sigma = \frac{1}{N}\sum_{i=1}^{N} (\mathbf{x}_i - \boldsymbol{\mu})(\mathbf{x}_i - \boldsymbol{\mu})^T$$Understanding Covariance:The diagonal entries ($\Sigma_{11}, \Sigma_{22}, \Sigma_{33}$) are the variances of R, G, B (same as Method 1).The off-diagonal entries (e.g., $\Sigma_{12}$) tell us if Red and Green are correlated. If $\Sigma_{RG}$ is high, it means the image contains colors like Yellow (R+G) or Cyan, rather than just random noise.The Feature Vector:3 values for $\boldsymbol{\mu}$.6 values for $\Sigma$ (since it is symmetric, $\Sigma_{RG} = \Sigma_{GR}$, so we only need the unique upper-triangular elements)3.Dimension: $3 + 6 = \mathbf{9 \text{ parameters}}$.
+\paragraph{Method 3: Gaussian Mixture Models (GMM) } The previous methods assume the image has only one dominant color cluster (unimodal). But what if the image has a red shirt, blue sky, and green grass? A single Gaussian would try to fit a giant blob in the middle (which would be gray), failing to capture the distinct colors.GMM fits $K$ different Gaussians to the data simultaneously.The Math: We model the probability of observing a pixel color $\mathbf{x}$ as a weighted sum of $K$ Gaussians:$$\mathfrak{p}(\mathbf{x}) = \sum_{k=1}^{K} \pi_k \mathcal{N}(\mathbf{x} | \boldsymbol{\mu}_k, \Sigma_k)$$$\pi_k$ (Mixing Coefficient): The "weight" or importance of the $k$-th Gaussian (e.g., "30 percent of the image belongs to the grass cluster"). $\sum \pi_k = 1$.$\boldsymbol{\mu}_k$: The center color of cluster $k$.$\Sigma_k$: The spread of cluster $k$.The Feature Vector:For every cluster $k$, we store its Weight ($\pi$), Mean ($\mu$), and Covariance ($\Sigma$).Simplification: To save space, we often assume $\Sigma_k$ is diagonal (ignoring correlations within the cluster) because the multiple clusters already handle the complex shape4.Dimension (assuming diagonal $\Sigma$):Per Gaussian: $1 (\pi) + 3 (\mu) + 3 (\text{diag}(\Sigma)) = 7$ parameters.Total: $7 \times K$ parameters.
+
+\section{Texture}
+Texture : 
+
+\section{Image Filtering and Convolution}
+\begin{itemize}
+    \item Convolution and Image filtering are used to generate the words for bag of visual words. Convolution = Mathematical Engine of Computer Vision.\\
+    \item Convolution takes tw functions to produce output, that corresponds to the amount of overlap between the two functions.\\
+    \item image = first function, filter/kernel = second function.
+    \item $f(x, y)$: The Input Image (intensity at $x, y$).
+    \item $k(u, v)$: The Kernel (or Filter/Mask) of size $(2h+1) \times (2w+1)$.
+    \item $g(x, y)$: The Output Image (Filtered).
+\end{itemize}
+$$g(x,y) = (f * k)(x,y) = \sum_{v=-h}^{h} \sum_{u=-w}^{w} k(u,v) f(x-u, y-v)$$
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Media/i10014.png}
+    \label{fig:Convolution}
+\end{figure}
+\subsection{How Convolution Works?}
+Here is the illustration of convolution example:
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Media/i10015.png}
+    \label{fig:Conv1}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Media/i10016.png}
+    \label{fig:Conv2}
+\end{figure}
+
+\subsection{Some Mathematical results}
+Convolving an image of size $H \times W$ with a filter (kernel) of size $h \times w$ (assuming $h, w$ are odd numbers like 3, 5, 7)
+\textbf{Output Dimensions} are given by:
+\begin{itemize}
+    \item   Output Height: $H_{out} = H - h + 1$
+    \item   Output Width: $W_{out} = W - w + 1$
+\end{itemize}
+The above results are for No Padding and Stride of 1.\\
+\textbf{Padding} is adding extra border pixels around the image.\\
+\textbf{Stride} is the step size with which we slide the filter over the image.\\
+With Padding $P$ and Stride $S$, the output dimensions become:
+\begin{itemize}
+    \item   Output Height: $H_{out} = \frac{H - h + 2P}{S} + 1$
+    \item   Output Width: $W_{out} = \frac{W - w + 2P}{S} + 1$
+    \item  Note: Ensure that $(H - h + 2P)$ and $(W - w + 2P)$ are divisible by $S$ for integer output dimensions.
+    \item  Example: For $H=32, W=32, h=5, w=5, P=2, S=1$:
+    \item   $H_{out} = \frac{32 - 5 + 2*2}{1} + 1 = 32$
+    \item   $W_{out} = \frac{32 - 5 + 2*2}{1} + 1 = 32$
+    \item  So, the output image remains $32 \times 32$.
+    \item   This is called "same" convolution because the output size is the same as the input size.
+\end{itemize}
+
+\section{Edge Detection using Convolution}
+\subsection{First order edge Detection}
+First order detectors use the first derivatives, which measures the rate of change of intensity. Mathematically, the gradient of the image intensity function $I(x, y)$ is given by:
+$$\nabla F = \left[ \frac{\partial F}{\partial x}, \frac{\partial F}{\partial y} \right]$$
+where $\frac{\partial F}{\partial x}$ are given by the formula:
+$$\frac{\partial F}{\partial x} =  {F(x + 1, y) - F(x, y)}$$
+and $\frac{\partial F}{\partial y}$ is given by the formula:
+$$\frac{\partial F}{\partial y} =  {F(x, y + 1) - F(x, y)}$$
+The magnitude of the gradient vector gives the strength of the edge:
+$$|\nabla F| = \sqrt{\left( \frac{\partial F}{\partial x} \right)^2 + \left( \frac{\partial F}{\partial y} \right)^2}$$
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{Media/i10017.png}
+    \label{fig:Conv1}
+\end{figure}
+
+From the given figure it is evident that the direction of edge is perpendicular to the gradient direction. The direction $\theta$ of the edge can be calculated as:
+$$\theta = \tan^{-1}\left( \frac{\partial F / \partial y}{\partial F / \partial x} \right)$$
+
+After calculateting the gradient magnitude and direction, we can apply Non-maximum Suppression and Thresholding to get thin and clean edges.
+\subsection{NMS - Non-Maximum Suppression} Basically, it is a technique used to thin out the edges detected in an image by retaining only the local maxima in the gradient direction.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Media/i10018.png}
+    \label{fig:NMS}
+\end{figure}
+
+\end{document}
