@@ -15,4 +15,16 @@
 \contentsline {subsection}{\numberline {1.5.2}Some Mathematical results}{5}{subsection.1.5.2}%
 \contentsline {section}{\numberline {1.6}Edge Detection using Convolution}{6}{section.1.6}%
 \contentsline {subsection}{\numberline {1.6.1}First order edge Detection}{6}{subsection.1.6.1}%
-\contentsline {subsection}{\numberline {1.6.2}NMS - Non-Maximum Suppression}{6}{subsection.1.6.2}%
+\contentsline {subsection}{\numberline {1.6.2}NMS - Non-Maximum Suppression}{7}{subsection.1.6.2}%
+\contentsline {subsection}{\numberline {1.6.3}Histogram of Gradient (HOG-descriptor)}{7}{subsection.1.6.3}%
+\contentsline {section}{\numberline {1.7}Points of Interest (Keypoints/Interest Points)}{8}{section.1.7}%
+\contentsline {paragraph}{Three Catagories of points}{8}{section*.5}%
+\contentsline {section}{\numberline {1.8}Bag of Visual Words BoVW}{9}{section.1.8}%
+\contentsline {subsection}{\numberline {1.8.1}Example: Constructing Feature Vectors (Mini-SIFT)}{10}{subsection.1.8.1}%
+\contentsline {subsubsection}{Step 1: Constructing Vector $\mathbf {x}_1$ (Vertical Edge)}{10}{section*.6}%
+\contentsline {subsubsection}{Step 2: Constructing Vector $\mathbf {x}_2$ (Horizontal Edge)}{11}{section*.7}%
+\contentsline {subsubsection}{Step 3: The Data Matrix $\mathcal {X}$}{11}{section*.8}%
+\contentsline {subsection}{\numberline {1.8.2}Example: Encoding and Pooling}{11}{subsection.1.8.2}%
+\contentsline {subsubsection}{Step 4: The Visual Dictionary (Codebook)}{11}{section*.9}%
+\contentsline {subsubsection}{Step 5: Encoding a New Image}{11}{section*.10}%
+\contentsline {subsubsection}{Step 6: Pooling (Histogram Construction)}{12}{section*.11}%

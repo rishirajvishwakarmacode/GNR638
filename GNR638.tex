@@ -179,4 +179,178 @@ After calculateting the gradient magnitude and direction, we can apply Non-maxim
     \label{fig:NMS}
 \end{figure}
 
+\subsection{Histogram of Gradient (HOG-descriptor)}
+HoG is a feature descriptor that maps the weighted distribution of gradient values to the gradient oreintaion.\\
+\begin{itemize}
+    \item Divide the image into small regions called cells (e.g., 8x8 pixels).
+    \item For each cell, compute a histogram of gradient directions (e.g., 9 bins covering 0-180 degrees).
+    \item Each pixel in the cell votes for a bin based on its gradient magnitude and orientation.
+    \item Group adjacent cells into larger blocks (e.g., 2x2 cells).
+    \item Normalize the histograms within each block to account for illumination variations.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Media/i12011.png}
+    \caption{Histogram of Oriented Gradients (HOG) Descriptor}
+    \label{fig:HOG}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Media/i12012.png}
+    \caption{HOG Feature Visualization}
+    \label{fig:HOG 2}
+\end{figure}
+
+Since HOG is obtained Patchwise we get a histogram for each of the patch and then we can plot the histograms as shown in the figure below:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Media/i12013.png}
+    \caption{HOG Feature Visualization Patchwise}
+    \label{fig:HOG 3}
+\end{figure}
+
+\section{Points of Interest (Keypoints/Interest Points)}
+Mathematically, it is a point where the local image structure contains rich information. If you cut out a small patch around an interest point, that patch should look unique enough that you can find its exact twin in another image, even if the lighting or viewpoint has changed.
+
+\paragraph{Three Catagories of points} are there in an image:
+\begin{itemize}
+    \item \textbf{Flat regions} are bad as once cut from the image there is no way to identify exact location.
+    \item \textbf{Edge points} are better than flat regions but still not good enough as they can be identified only along one direction.
+    \item \textbf{Corner points} are the best as they have high variation in all directions and therefore can be identified uniquely.
+\end{itemize} 
+Examples of untility of Keypoints mentioned in the class are Oreientation detection and Paranoma Stiching. In both the cases we tend to track the keypoints in both the images and depending on the use either they are matched with each other or maped across each of the images.
+
+\section{Bag of Visual Words BoVW}
+"The" Image Encoding  Technique\\
+\begin{itemize}
+    \item Detect Keypoints.
+    \item Take a patch  sourrounding each keypoint.
+    \item Describe them using HOG 
+    \item Now Use BoVW to encode the image.
+\end{itemize}
+Before we can describe an image, we need a common vocabulary. We build this by examining the distribution of features across the entire training dataset.1. Input Data PreparationLet $\mathcal{I}_{train} = \{I_1, I_2, \dots, I_T\}$ be the set of $T$ training images.From each image $I_t$, we extract a set of local HoG descriptors.Let $\mathcal{X} = \{\mathbf{x}_1, \mathbf{x}_2, \dots, \mathbf{x}_M\}$ be the aggregate collection of all descriptors from all training images, where $M$ is very large (millions).Each descriptor $\mathbf{x}_i \in \mathbb{R}^d$ is a $d$-dimensional vector (e.g., for standard HoG blocks, $d$ might be 36 or 128).2. The K-Means Clustering AlgorithmWe use K-Means to group these millions of descriptors into $K$ clusters. Each cluster center represents a "Visual Word."Goal: Find a set of $K$ centroids $\mathcal{C} = \{\boldsymbol{\mu}_1, \boldsymbol{\mu}_2, \dots, \boldsymbol{\mu}_K\}$ that minimizes the Within-Cluster Sum of Squares (WCSS).Objective Function:$$J = \sum_{k=1}^{K} \sum_{\mathbf{x}_i \in S_k} ||\mathbf{x}_i - \boldsymbol{\mu}_k||^2_2$$Where $S_k$ is the set of descriptors assigned to cluster $k$.3. The Iterative OptimizationStep A (Assignment): Assign every descriptor $\mathbf{x}_i$ to the nearest centroid.$$z_i^{(t)} = \arg\min_{k} ||\mathbf{x}_i - \boldsymbol{\mu}_k^{(t)}||^2_2$$Step B (Update): Recalculate the centroids based on the new assignments.$$\boldsymbol{\mu}_k^{(t+1)} = \frac{1}{|S_k|} \sum_{\mathbf{x}_i \in S_k} \mathbf{x}_i$$Convergence: Repeat until assignments $z_i$ do not change.\\
+
+Encoding \& Pooling (Constructing the Histogram)Now, for a specific image (training or test), we want to convert its collection of descriptors into a single fixed-length vector.1. InputAn image $I$ containing $N$ local descriptors: $X_I = \{\mathbf{x}_1, \mathbf{x}_2, \dots, \mathbf{x}_N\}$.Note: $N$ varies from image to image, but we need a fixed output size.2. Vector Quantization (Hard Assignment)We map each continuous descriptor $\mathbf{x}_i$ to the index of the nearest visual word in our codebook $\mathcal{V}$. This is mathematically defined as a mapping function $q(\mathbf{x})$:$$q(\mathbf{x}_i) = \arg\min_{k \in \{1, \dots, K\}} ||\mathbf{x}_i - \boldsymbol{\mu}_k||_2$$This step discretizes the continuous feature space. A complex 128-D vector is replaced by a single integer $k$2222.3. Pooling (Histogram Construction)We aggregate these assignments into a histogram $\mathbf{h} \in \mathbb{R}^K$. This removes spatial information (we know what appeared, but not where).For each visual word $k$ (from 1 to $K$), the histogram bin $h_k$ is calculated as:$$h_k = \sum_{i=1}^{N} \delta(q(\mathbf{x}_i) - k)$$Where $\delta(\cdot)$ is the Dirac delta function (returns 1 if the argument is 0, else 0).In simple terms: Count how many descriptors in the image were assigned to Word $k$.4. NormalizationSince images have different numbers of features $N$ (e.g., a high-res image has more patches than a low-res one), raw counts are not comparable. We must normalize the histogram to transform it into a probability distribution or unit vector.L1 Normalization (Frequency): Sum of elements becomes 1.$$\mathbf{h}_{L1} = \frac{\mathbf{h}}{\sum_{j=1}^{K} h_j} = \frac{\mathbf{h}}{N}$$Interpretation: "Visual Word $k$ makes up 10percentage of the image features."L2 Normalization (Euclidean): Unit length vector (preferred for SVMs).$$\mathbf{h}_{L2} = \frac{\mathbf{h}}{||\mathbf{h}||_2} = \frac{\mathbf{h}}{\sqrt{\sum_{j=1}^{K} h_j^2}}$$
+
+\subsection{Example: Constructing Feature Vectors (Mini-SIFT)}
+To understand the contents of a feature vector $\mathbf{x}_i$ and the dataset $\mathcal{X}$, consider a simplified "Mini-SIFT" descriptor with the following parameters:
+\begin{itemize}
+    \item \textbf{Patch Size:} $4 \times 4$ pixels.
+    \item \textbf{Grid:} $2 \times 2$ sub-regions (Quadrants: TL, TR, BL, BR).
+    \item \textbf{Bins:} 2 orientation bins (Horizontal vs. Vertical).
+    \item \textbf{Total Dimension:} $4 \text{ quadrants} \times 2 \text{ bins} = 8$.
+\end{itemize}
+
+\subsubsection{Step 1: Constructing Vector $\mathbf{x}_1$ (Vertical Edge)}
+Consider a patch $P_1$ containing a vertical edge:
+\begin{equation}
+    P_1 = 
+    \begin{bmatrix} 
+    10 & 10 & 50 & 50 \\
+    10 & 10 & 50 & 50 \\
+    10 & 10 & 50 & 50 \\
+    10 & 10 & 50 & 50 
+    \end{bmatrix}
+\end{equation}
+
+The gradients show strong horizontal change ($G_x \approx 40$) in the right half, and zero vertical change ($G_y = 0$).
+
+\textbf{Voting by Quadrant:}
+\begin{itemize}
+    \item \textbf{Top-Left (TL):} No gradients $\rightarrow [0, 0]$
+    \item \textbf{Top-Right (TR):} Strong Horizontal $\rightarrow [80, 0]$
+    \item \textbf{Bottom-Left (BL):} No gradients $\rightarrow [0, 0]$
+    \item \textbf{Bottom-Right (BR):} Strong Horizontal $\rightarrow [80, 0]$
+\end{itemize}
+
+Concatenating these gives the feature vector $\mathbf{x}_1$:
+\begin{equation}
+    \mathbf{x}_1 = [ 
+    \underbrace{0, 0}_{\text{TL}}, 
+    \underbrace{80, 0}_{\text{TR}}, 
+    \underbrace{0, 0}_{\text{BL}}, 
+    \underbrace{80, 0}_{\text{BR}} 
+    ]
+\end{equation}
+
+\subsubsection{Step 2: Constructing Vector $\mathbf{x}_2$ (Horizontal Edge)}
+Consider a second patch $P_2$ containing a horizontal edge:
+\begin{equation}
+    P_2 = 
+    \begin{bmatrix} 
+    10 & 10 & 10 & 10 \\
+    10 & 10 & 10 & 10 \\
+    50 & 50 & 50 & 50 \\
+    50 & 50 & 50 & 50 
+    \end{bmatrix}
+\end{equation}
+
+Here, gradients are purely vertical ($G_y \approx 40$).
+\begin{equation}
+    \mathbf{x}_2 = [ 
+    \underbrace{0, 0}_{\text{TL}}, 
+    \underbrace{0, 0}_{\text{TR}}, 
+    \underbrace{0, 80}_{\text{BL}}, 
+    \underbrace{0, 80}_{\text{BR}} 
+    ]
+\end{equation}
+
+\subsubsection{Step 3: The Data Matrix $\mathcal{X}$}
+The collection $\mathcal{X}$ is the stack of all local descriptors extracted from the training images. If our dataset only contained these two patches, $\mathcal{X}$ would be:
+
+\begin{equation}
+    \mathcal{X} = 
+    \begin{bmatrix} 
+    \mathbf{x}_1 \\
+    \mathbf{x}_2
+    \end{bmatrix} = 
+    \begin{bmatrix} 
+    0 & 0 & 80 & 0 & 0 & 0 & 80 & 0 \\
+    0 & 0 & 0 & 0 & 0 & 80 & 0 & 80
+    \end{bmatrix}
+\end{equation}
+
+This matrix $\mathcal{X}$ (of size $M \times D$) is the input to the \textbf{K-Means} algorithm used to learn the Visual Dictionary.
+
+\subsection{Example: Encoding and Pooling}
+
+\subsubsection{Step 4: The Visual Dictionary (Codebook)}
+After running K-Means on the dataset $\mathcal{X}$, assume we find $K=2$ cluster centers (Visual Words) representing the canonical features:
+\begin{itemize}
+    \item \textbf{Word 1 ($\boldsymbol{\mu}_1$):} Vertical Edge Prototype.
+    \item \textbf{Word 2 ($\boldsymbol{\mu}_2$):} Horizontal Edge Prototype.
+\end{itemize}
+
+\subsubsection{Step 5: Encoding a New Image}
+Consider a new query image from which we extract 3 patches. We compute the Euclidean distance from each patch descriptor to the dictionary centroids and assign it to the nearest word (Vector Quantization).
+
+\begin{enumerate}
+    \item \textbf{Patch A:} Descriptor matches $\boldsymbol{\mu}_1$ perfectly. \\
+    $\rightarrow$ Assigned to \textbf{Word 1}.
+    
+    \item \textbf{Patch B:} Descriptor matches $\boldsymbol{\mu}_1$ perfectly. \\
+    $\rightarrow$ Assigned to \textbf{Word 1}.
+    
+    \item \textbf{Patch C:} Descriptor is close to $\boldsymbol{\mu}_2$ (Horizontal). \\
+    $\rightarrow$ Assigned to \textbf{Word 2}.
+\end{enumerate}
+
+\subsubsection{Step 6: Pooling (Histogram Construction)}
+We aggregate the assignments into a histogram $\mathbf{h} \in \mathbb{R}^K$.
+
+\begin{itemize}
+    \item Count for Word 1: 2
+    \item Count for Word 2: 1
+\end{itemize}
+
+The raw histogram is $\mathbf{h}_{raw} = [2, 1]$. To make this invariant to the number of patches (image size), we apply L1 normalization (dividing by $N=3$):
+
+\begin{equation}
+    \mathbf{h}_{final} = \left[ \frac{2}{3}, \frac{1}{3} \right] \approx [0.67, 0.33]
+\end{equation}
+
+This final vector $[0.67, 0.33]$ is the \textbf{Bag of Visual Words} representation of the new image, which serves as the input to the final classifier (e.g., SVM).
+
 \end{document}
